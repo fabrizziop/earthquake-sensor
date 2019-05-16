@@ -87,35 +87,36 @@ while True:
 	conn, addr = s.accept()
 	sdat = conn.recv(6+(MEASUREMENT_AMOUNT*6))
 	conn.close()
-	#print(sdat)
 	processed_data = simple_data(sdat)
-	#print(processed_data)
-	true_cal_data = [processed_data[0][0] + calibration_correction[0], processed_data[0][1] + calibration_correction[1], processed_data[0][2] + calibration_correction[2]]
-	true_cal_data_int = [int(true_cal_data[0]),int(true_cal_data[1]),int(true_cal_data[2])]
-	deviation_list, maximum_deviation = calculate_deviation(true_cal_data_int, processed_data[1])
-	print("DEV:",maximum_deviation/16384)
-	if WARMUP_TIME == 0:
-		if maximum_deviation >= MAX_G_ALLOWANCE:
-			if current_earthquake_reset == 0:
-				file_to_open = get_name_to_write()
-				print("Earthquake Detected")
-				print("Opening file", file_to_open)
-				obj_to_write = open(file_to_open, "w")
-			current_earthquake_reset = EARTHQUAKE_RESET
-		if current_earthquake_reset >= 1:
-			print("Reset count:", current_earthquake_reset)
-			obj_to_write.write(str(int(time.time()*1000)) +"," + generate_huge_string(true_cal_data_int) + "," + generate_huge_string(processed_data[1]) + "\n")
-			obj_to_write.flush()
-			current_earthquake_reset -= 1
-			if current_earthquake_reset == 0:
-				print("Closing File")
-				obj_to_write.close()
-				if GENERATE_HTML:
-					temporal_process = subprocess.Popen(GENERATE_HTML_SCRIPT,stdout=subprocess.DEVNULL, shell=True)
-	avg_deviations = calculate_avg_deviation(true_cal_data, processed_data[1])
-	calibration_correction = [calibration_correction[0] + avg_deviations[0]*CORRECTION_FACTOR, calibration_correction[1] + avg_deviations[1]*CORRECTION_FACTOR, calibration_correction[2] + avg_deviations[2]*CORRECTION_FACTOR]
-	print(calibration_correction)
-	print(processed_data[0],true_cal_data_int)
-	if WARMUP_TIME > 0:
-		print("WARMUP")
-		WARMUP_TIME -= 1
+	if sum(processed_data[0]) > 1024:
+		true_cal_data = [processed_data[0][0] + calibration_correction[0], processed_data[0][1] + calibration_correction[1], processed_data[0][2] + calibration_correction[2]]
+		true_cal_data_int = [int(true_cal_data[0]),int(true_cal_data[1]),int(true_cal_data[2])]
+		deviation_list, maximum_deviation = calculate_deviation(true_cal_data_int, processed_data[1])
+		print("DEV:",maximum_deviation/16384)
+		if WARMUP_TIME == 0:
+			if maximum_deviation >= MAX_G_ALLOWANCE:
+				if current_earthquake_reset == 0:
+					file_to_open = get_name_to_write()
+					print("Earthquake Detected")
+					print("Opening file", file_to_open)
+					obj_to_write = open(file_to_open, "w")
+				current_earthquake_reset = EARTHQUAKE_RESET
+			if current_earthquake_reset >= 1:
+				print("Reset count:", current_earthquake_reset)
+				obj_to_write.write(str(int(time.time()*1000)) +"," + generate_huge_string(true_cal_data_int) + "," + generate_huge_string(processed_data[1]) + "\n")
+				obj_to_write.flush()
+				current_earthquake_reset -= 1
+				if current_earthquake_reset == 0:
+					print("Closing File")
+					obj_to_write.close()
+					if GENERATE_HTML:
+						temporal_process = subprocess.Popen(GENERATE_HTML_SCRIPT,stdout=subprocess.DEVNULL, shell=True)
+		avg_deviations = calculate_avg_deviation(true_cal_data, processed_data[1])
+		calibration_correction = [calibration_correction[0] + avg_deviations[0]*CORRECTION_FACTOR, calibration_correction[1] + avg_deviations[1]*CORRECTION_FACTOR, calibration_correction[2] + avg_deviations[2]*CORRECTION_FACTOR]
+		print(calibration_correction)
+		print(processed_data[0],true_cal_data_int)
+		if WARMUP_TIME > 0:
+			print("WARMUP")
+			WARMUP_TIME -= 1
+	else:
+		print("Null data received, avoiding false report!")
